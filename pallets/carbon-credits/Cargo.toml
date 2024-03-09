@@ -17,14 +17,14 @@ codec = { package = "parity-scale-codec", version = "3.0.0", default-features = 
 frame-support = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 frame-system = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-pallet-uniques = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
+pallet-uniques = { workspace = true }
 scale-info = { version = "2.0.1", default-features = false, features = ["derive"] }
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
 # Local dependencies
 pallet-assets = { git = "https://github.com/moondance-labs/polkadot-sdk", branch = "tanssi-polkadot-v1.3.0", default-features = false }
-primitives = { package = 'bitgreen-primitives', path = '../../primitives/btg-primitives/', default-features = false }
+primitives = { package = 'bitgreen-primitives', path = '../../primitives/btg_primitives/', default-features = false }
 
 # Benchmarking
 frame-benchmarking = { git = "https://github.com/paritytech/polkadot-sdk.git", default-features = false, optional = true, branch = "release-polkadot-v1.1.0" }
@@ -33,7 +33,7 @@ pallet-timestamp = { git = "https://github.com/paritytech/polkadot-sdk", branch 
 sp-core = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
 [dev-dependencies]
-serde = { version = "1.0.188", features = ["derive"] }
+serde = { version = "1.0.188", features = ["derive"], default-features = false }
 sp-io = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 
 [features]

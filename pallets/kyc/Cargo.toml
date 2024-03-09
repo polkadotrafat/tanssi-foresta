@@ -22,7 +22,7 @@ sp-io = {git = "https://github.com/paritytech/polkadot-sdk", branch = "release-p
 sp-runtime = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 sp-std = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
 pallet-balances = { git = "https://github.com/paritytech/polkadot-sdk", branch = "release-polkadot-v1.1.0", default-features = false }
-bitgreen-primitives = { path = '../../primitives/btg-primitives/', default-features = false }
+bitgreen-primitives = { path = '../../primitives/btg_primitives/', default-features = false }
 
 [features]
 default = ["std"]

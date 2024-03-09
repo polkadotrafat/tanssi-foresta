@@ -17,25 +17,49 @@ codec = { package = "parity-scale-codec", version = "3.6.1", default-features = 
     "derive",
 ] }
 scale-info = { version = "2.5.0", default-features = false, features = ["derive"] }
+serde = { version = "1.0.163", features = ["derive"], default-features = false }
 frame-benchmarking = { workspace = true}
 frame-support = { workspace = true}
 frame-system = { workspace = true}
 sp-std = { workspace = true}
 sp-runtime = { workspace = true}
+sp-core = { workspace = true}
+pallet-balances = { workspace = true }
+pallet-assets = { workspace = true }
+pallet-uniques = { workspace = true }
+pallet-membership = { workspace = true }
+pallet-timestamp = { workspace = true }
+pallet-carbon-credits = { workspace = true }
+pallet-carbon-credits-pool = { workspace = true }
+orml-traits = { workspace = true }
+orml-tokens = { workspace = true }
+pallet-dex = { workspace = true }
+pallet-kyc = {workspace = true}
+primitives  = { package = 'bitgreen-primitives', path = '../../primitives/btg_primitives/', default-features = false }
+
+
 
 [dev-dependencies]
-sp-core = { workspace = true}
 sp-io = { workspace = true}
 
 [features]
 default = ["std"]
 std = [
 	"codec/std",
+	"serde/std",
 	"frame-benchmarking/std",
 	"frame-support/std",
 	"frame-system/std",
 	"scale-info/std",
+	'pallet-assets/std',
+    'pallet-balances/std',
+    'pallet-uniques/std',
+    'pallet-membership/std',
+    'pallet-timestamp/std',
+	'sp-core/std',
 	'sp-std/std',
+	'pallet-carbon-credits/std',
+	'pallet-carbon-credits-pool/std',
 ]
 runtime-benchmarks = ["frame-benchmarking/runtime-benchmarks"]
 try-runtime = ["frame-support/try-runtime"]

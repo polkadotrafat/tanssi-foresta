@@ -1,0 +1,35 @@
+# Use Rust official image as the builder base
+FROM rust:latest as builder
+
+# Install required dependencies
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        protobuf-compiler \
+        clang \
+        libclang-dev \
+    && rm -rf /var/lib/apt/lists/* \
+    && rustup target add wasm32-unknown-unknown
+
+
+WORKDIR /usr/src/tanssi
+
+# Copy the entire tanssi directory into the Docker image
+COPY . .
+
+# Build the project, including the crate that depends on protoc
+RUN cargo build --release -p container-chain-template-simple-node
+
+# Remove artifacts from the build that are not needed in the final image
+RUN rm -rf ./target/release/deps/tanssi*
+
+# Use Debian slim for the runtime
+FROM debian:buster-slim
+
+# Copy the binary from the builder stage
+COPY --from=builder /usr/src/tanssi/target/release/container-chain-template-simple-node /usr/local/bin
+
+# Expose the WebSocket port
+EXPOSE 9944
+
+# Command to run the binary
+CMD ["container-chain-template-simple-node", "--dev", "--sealing", "6000"]

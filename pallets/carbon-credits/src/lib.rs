@@ -399,8 +399,7 @@ pub mod pallet {
 			project_id: T::ProjectId,
 			is_approved: bool,
 		) -> DispatchResult {
-			let sender = ensure_signed(origin)?;
-			Self::check_authorized_account(&sender)?;
+			T::ForceOrigin::ensure_origin(origin)?;
 			Self::do_approve_project(project_id, is_approved)
 		}
 

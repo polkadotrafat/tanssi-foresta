@@ -136,7 +136,7 @@ fn create_and_approve_project(originator_account: u64, authorised_account: u64) 
 	));
 
 	assert_ok!(CarbonCredits::approve_project(
-		RawOrigin::Signed(authorised_account).into(),
+		RawOrigin::Root.into(),
 		0u32,
 		true
 	),);
@@ -171,7 +171,7 @@ fn create_and_approve_project_batch(originator_account: u64, authorised_account:
 		authorised_account
 	));
 	assert_ok!(CarbonCredits::approve_project(
-		RawOrigin::Signed(authorised_account).into(),
+		RawOrigin::Root.into(),
 		project_id,
 		true
 	),);
@@ -496,7 +496,7 @@ fn resubmit_works() {
 			authorised_account
 		));
 		assert_ok!(CarbonCredits::approve_project(
-			RawOrigin::Signed(authorised_account).into(),
+			RawOrigin::Root.into(),
 			project_id,
 			true
 		),);
@@ -521,16 +521,6 @@ fn approve_project_works() {
 		let project_id = 0;
 		let asset_id = 0;
 
-		// non authorised account should trigger an error
-		assert_noop!(
-			CarbonCredits::approve_project(
-				RawOrigin::Signed(authorised_account).into(),
-				project_id,
-				true
-			),
-			Error::<Test>::NotAuthorised
-		);
-
 		// authorise the account
 		assert_ok!(CarbonCredits::force_add_authorized_account(
 			RawOrigin::Root.into(),
@@ -540,7 +530,7 @@ fn approve_project_works() {
 		// non existent project should throw error
 		assert_noop!(
 			CarbonCredits::approve_project(
-				RawOrigin::Signed(authorised_account).into(),
+				RawOrigin::Root.into(),
 				1234,
 				true
 			),
@@ -562,7 +552,7 @@ fn approve_project_works() {
 
 		// approve should work now
 		assert_ok!(CarbonCredits::approve_project(
-			RawOrigin::Signed(authorised_account).into(),
+			RawOrigin::Root.into(),
 			project_id,
 			true
 		),);
@@ -604,7 +594,7 @@ fn cleanup_after_project_reject_works() {
 
 		// approve the project to create asset
 		assert_ok!(CarbonCredits::approve_project(
-			RawOrigin::Signed(authorised_account).into(),
+			RawOrigin::Root.into(),
 			project_id,
 			true
 		),);
@@ -1476,7 +1466,7 @@ fn update_works() {
 			authorised_account
 		));
 		assert_ok!(CarbonCredits::approve_project(
-			RawOrigin::Signed(authorised_account).into(),
+			RawOrigin::Root.into(),
 			project_id,
 			true
 		),);
@@ -1568,7 +1558,7 @@ fn add_batch_group_works() {
 			authorised_account
 		));
 		assert_ok!(CarbonCredits::approve_project(
-			RawOrigin::Signed(authorised_account).into(),
+			RawOrigin::Root.into(),
 			project_id,
 			true
 		),);

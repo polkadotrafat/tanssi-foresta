@@ -8,6 +8,7 @@ use sp_std::{fmt::Debug, vec::Vec};
 #[derive(Clone, Encode, Decode, Eq, PartialEq, Debug, TypeInfo, MaxEncodedLen)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum RegistryName {
+	BioCarbon,
 	Verra,
 	GoldStandard,
 	AmericanCarbonRegistry,

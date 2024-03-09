@@ -38,6 +38,7 @@ impl pallet_balances::Config for Test {
 	type ReserveIdentifier = [u8; 8];
 	type WeightInfo = ();
 	type RuntimeHoldReason = RuntimeHoldReason;
+	type RuntimeFreezeReason = RuntimeFreezeReason;
 	type FreezeIdentifier = ();
 	type MaxHolds = ConstU32<0>;
 	type MaxFreezes = ConstU32<0>;
@@ -92,6 +93,8 @@ impl Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type AddOrigin = frame_system::EnsureRoot<u64>;
 	type MaxAuthorizedAccountCount = ConstU32<10>;
+	type MaxStringLength = ConstU32<512>;
+	type MaxQueueLength = ConstU32<100>;
 	type PalletId = KycPalletId;
 	type Currency = Balances;
 	type WeightInfo = ();

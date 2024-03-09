@@ -128,11 +128,11 @@ container-chains/templates/frontier/node/src/chain_spec.rs
 
 ### Local Dependencies
 
-1. pallet-assets = { default-features = false, path = "../../pallets/assets" }
+1. pallet-assets = { default-features = false, path = "../../pallets/assets" } :check
 
-2. pallet-carbon-credits = { default-features = false, version = '0.0.1', path = "../../pallets/carbon-credits" }
+2. pallet-carbon-credits = { default-features = false, version = '0.0.1', path = "../../pallets/carbon-credits" } :check
 
-3. pallet-carbon-credits-pool = { default-features = false, version = '0.0.1', path = "../../pallets/carbon-credits-pool" }
+3. pallet-carbon-credits-pool = { default-features = false, version = '0.0.1', path = "../../pallets/carbon-credits-pool" } :check
 
 4. pallet-parachain-staking = { default-features = false, version = '0.0.1', path = "../../pallets/parachain-staking" }
 
@@ -140,8 +140,8 @@ container-chains/templates/frontier/node/src/chain_spec.rs
 
 6. pallet-vesting-contract = { default-features = false, version = '0.0.1', path = "../../pallets/vesting-contract" }
 
-7. pallet-kyc = { default-features = false, version = '0.0.1', path = "../../pallets/kyc" }
+7. pallet-kyc = { default-features = false, version = '0.0.1', path = "../../pallets/kyc" } :check
 
 8. pallet-dex = { default-features = false, path = "../../pallets/dex" }
 
-9. primitives = { package = "bitgreen-primitives", path = "../../primitives", default-features = false }
+9. primitives = { package = "bitgreen-primitives", path = "../../primitives", default-features = false } :check

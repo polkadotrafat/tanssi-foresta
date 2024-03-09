@@ -177,7 +177,7 @@ pub fn create_project_and_mint<T: Config>(
 		authorised_account
 	));
 	assert_ok!(CarbonCredits::approve_project(
-		RawOrigin::Signed(authorised_account).into(),
+		RawOrigin::Root.into(),
 		project_id,
 		true
 	),);
@@ -280,7 +280,7 @@ fn deposit_works() {
 			CarbonCreditPools::deposit(
 				RawOrigin::Signed(authorised_account_one).into(),
 				pool_id,
-				project_id,
+				asset_id,
 				0
 			),
 			Error::<Test>::InvalidAmount
@@ -290,7 +290,7 @@ fn deposit_works() {
 		assert_ok!(CarbonCreditPools::deposit(
 			RawOrigin::Signed(authorised_account_one).into(),
 			pool_id,
-			project_id,
+			asset_id,
 			project_tokens_to_deposit
 		));
 

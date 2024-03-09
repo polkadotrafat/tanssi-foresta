@@ -49,6 +49,7 @@ pub mod pallet {
 	pub type BalanceOf<T, I> =
 		<<T as Config<I>>::Currency as Currency<<T as frame_system::Config>::AccountId>>::Balance;
 
+
 	#[pallet::config]
 	pub trait Config<I: 'static = ()>: frame_system::Config {
 		/// The overarching event type.
@@ -60,6 +61,10 @@ pub mod pallet {
 
 		/// Maximum amount of authorised accounts permitted
 		type MaxAuthorizedAccountCount: Get<u32>;
+
+		type MaxStringLength: Get<u32>;
+
+		type MaxQueueLength: Get<u32>;
 
 		/// The currency used for the pallet
 		type Currency: Currency<Self::AccountId>;
@@ -88,6 +93,21 @@ pub mod pallet {
 	#[pallet::getter(fn airdrop_amount)]
 	// Amount to airdrop on every kyc success
 	pub type AirdropAmount<T: Config<I>, I: 'static = ()> = StorageValue<_, BalanceOf<T, I>>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_applicant)]
+	pub type Applicants<T: Config<I>, I: 'static = ()> = StorageMap<
+		_,
+		Blake2_128Concat,
+		T::AccountId,
+		(BoundedVec<u8,T::MaxStringLength>,BoundedVec<u8,T::MaxStringLength>),
+		ValueQuery,
+	>;
+
+	#[pallet::storage]
+	#[pallet::getter(fn get_queue)]
+	pub type Queue<T: Config<I>, I: 'static = ()> =
+		StorageValue<_, BoundedVec<T::AccountId, T::MaxQueueLength>, ValueQuery>;
 
 	#[pallet::genesis_config]
 	pub struct GenesisConfig<T: Config<I>, I: 'static = ()> {
@@ -141,6 +161,12 @@ pub mod pallet {
 		AuthorizedAccountAlreadyExists,
 		/// No authorization account
 		NotAuthorised,
+		/// Applicant Not Found
+		ApplicantNotFound,
+		/// ApplicantAlreadyExists
+		ApplicantAlreadyExists,
+		/// TooManyApplicants
+		TooManyApplicants,
 	}
 
 	#[pallet::call]
@@ -277,6 +303,84 @@ pub mod pallet {
 			// remove the account_id from the list of authorized accounts if already exists
 			AirdropAmount::<T, I>::set(amount);
 			Ok(())
+		}
+
+		#[pallet::call_index(8)]
+		#[pallet::weight(T::WeightInfo::add_member(1))]
+		pub fn apply_for_membership(origin: OriginFor<T>, name: BoundedVec<u8,T::MaxStringLength>, email: BoundedVec<u8,T::MaxStringLength>) -> DispatchResult {
+			let who = ensure_signed(origin)?;
+			ensure!(Members::<T, I>::get(who.clone()).is_none(), Error::<T, I>::AlreadyMember);
+
+
+			Applicants::<T,I>::insert(who.clone(),(name,email));
+			Queue::<T,I>::try_mutate(|queue| -> DispatchResult {
+				ensure!(
+					!queue.contains(&who),
+					Error::<T, I>::ApplicantAlreadyExists
+				);
+
+				queue
+					.try_push(who.clone())
+					.map_err(|_| Error::<T, I>::TooManyApplicants)?;
+				Ok(())
+			})?;
+			//let mut queue = Queue::<T,I>::get();
+			//queue.push(who.clone());
+			//Queue::<T,I>::put(queue);
+
+			Ok(())
+		}
+
+		#[pallet::call_index(9)]
+		#[pallet::weight(T::WeightInfo::add_member(1))]
+		pub fn accept_member(origin: OriginFor<T>, who: AccountIdLookupOf<T>, kyc_level: UserLevel) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			Self::check_authorized_account(&sender)?;
+
+			let who = T::Lookup::lookup(who)?;
+
+
+			// ensure the user kyc does not already exist
+			ensure!(Members::<T, I>::get(who.clone()).is_none(), Error::<T, I>::AlreadyMember);
+
+			let mut queue = Queue::<T,I>::get();
+
+			match queue.binary_search(&who) {
+				Err(_) => Err(Error::<T,I>::ApplicantNotFound.into()),
+				Ok(index) => {
+					// insert new kyc
+					Members::<T, I>::insert(who.clone(), kyc_level.clone());
+
+					let _ = Self::transfer_kyc_airdrop(who.clone());
+
+					queue.remove(index);
+					Queue::<T,I>::put(queue);
+					Ok(())
+				},
+			}
+			
+		}
+
+		#[pallet::call_index(10)]
+		#[pallet::weight(T::WeightInfo::add_member(1))]
+		pub fn reject_member(origin: OriginFor<T>, who: AccountIdLookupOf<T>) -> DispatchResult {
+			let sender = ensure_signed(origin)?;
+			Self::check_authorized_account(&sender)?;
+
+			let who = T::Lookup::lookup(who)?;
+
+
+			let mut queue = Queue::<T,I>::get();
+
+			match queue.binary_search(&who) {
+				Err(_) => Err(Error::<T,I>::ApplicantNotFound.into()),
+				Ok(index) => {
+					queue.remove(index);
+					Queue::<T,I>::put(queue);
+					Ok(())
+				},
+			}			
+
 		}
 	}
 }

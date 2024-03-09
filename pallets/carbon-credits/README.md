@@ -49,7 +49,7 @@ pub struct Batch<T: pallet::Config> {
 }
 ```
 
-A project can represent Carbon Creditss from multiple batches. For example a project can have 100 tokens of 2019 vintage and 200 tokens of 2020 vintage. In this case the project can package these two vintages to create a Carbon Credits token that has a supply of 300 tokens. These vintages can be represented inside a batchgroup, in this case, it is important to remember that the minting and retirement always gives priority to the oldest vintage.
+A project can represent Carbon Credits from multiple batches. For example a project can have 100 tokens of 2019 vintage and 200 tokens of 2020 vintage. In this case the project can package these two vintages to create a Carbon Credits token that has a supply of 300 tokens. These vintages can be represented inside a batchgroup, in this case, it is important to remember that the minting and retirement always gives priority to the oldest vintage.
 Example : in the above case of 300 tokens, when the originator mints 100 tokens, we first mint the oldest (2019) credits and only once the supply is exhausted we move on the next vintage, same for retirement.
 ### Asset Handler
 

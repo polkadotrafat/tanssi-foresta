@@ -10,3 +10,4 @@
 
 # Spec/Wasm build directory
 /build/
+chain_spec.json

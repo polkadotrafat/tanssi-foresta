@@ -16,6 +16,7 @@ parity-scale-codec = { workspace = true, features = [ "derive" ] }
 scale-info = { workspace = true, features = [ "derive" ] }
 serde = { workspace = true, optional = true, features = [ "derive" ] }
 smallvec = { workspace = true }
+getrandom = {workspace = true}
 
 # Local
 pallet-cc-authorities-noting = { workspace = true }
@@ -35,6 +36,7 @@ frame-support = { workspace = true }
 frame-system = { workspace = true }
 frame-system-rpc-runtime-api = { workspace = true }
 pallet-balances = { workspace = true }
+pallet-membership = { workspace = true }
 pallet-proxy = { workspace = true }
 pallet-root-testing = { workspace = true }
 pallet-session = { workspace = true }
@@ -90,6 +92,23 @@ pallet-assets = { workspace = true }
 pallet-uniques = { workspace = true }
 pallet-foresta-collectives = { workspace = true }
 
+	# Custom Pallets
+pallet-carbon-credits = { workspace = true }
+pallet-carbon-credits-pool = { workspace = true }
+pallet-dex = { workspace = true }
+pallet-kyc = { workspace = true }
+pallet-general-storage = { workspace = true }
+pallet-foresta-collectives = { workspace = true }
+pallet-foresta-ocw = { workspace = true }
+orml-tokens = { workspace = true }
+orml-traits = { workspace = true }
+pallet-acurast-fulfillment-receiver = { git = "https://github.com/Acurast/acurast-core.git", default-features = false, branch = "staging/polkadot-v1.1.0" }
+acurast-p256-crypto = { git = "https://github.com/Acurast/acurast-core.git", default-features = false, branch = "staging/polkadot-v1.1.0" }
+
+
+# Local Dependencies
+primitives = { package = "bitgreen-primitives", path = "../../../../primitives/btg_primitives", default-features = false }
+
 
 [build-dependencies]
 substrate-wasm-builder = { workspace = true }
@@ -119,6 +138,7 @@ std = [
 	"pallet-balances/std",
 	"pallet-cc-authorities-noting/std",
 	"pallet-maintenance-mode/std",
+	"pallet-membership/std",
 	"pallet-migrations/std",
 	"pallet-proxy/std",
 	"pallet-root-testing/std",
@@ -158,6 +178,16 @@ std = [
 	"xcm-primitives/std",
 	"pallet-assets/std",
 	"pallet-uniques/std",
+	"pallet-carbon-credits/std",
+	"pallet-carbon-credits-pool/std",
+	"pallet-dex/std",
+	"pallet-kyc/std",
+	"pallet-general-storage/std",
+	"pallet-foresta-collectives/std",
+	"orml-tokens/std",
+	"orml-traits/std",
+	"pallet-acurast-fulfillment-receiver/std",
+	"acurast-p256-crypto/std",
 ]
 
 # Allow to print logs details (no wasm:stripped)
@@ -193,6 +223,8 @@ runtime-benchmarks = [
 	"xcm-primitives/runtime-benchmarks",
 	"pallet-assets/runtime-benchmarks",
 	"pallet-uniques/runtime-benchmarks",
+	"pallet-foresta-collectives/runtime-benchmarks",
+
 ]
 
 try-runtime = [

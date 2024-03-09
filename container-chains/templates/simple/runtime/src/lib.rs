@@ -28,18 +28,23 @@ use sp_version::NativeVersion;
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
 
+pub use primitives::{
+    currency::*, Amount
+};
+
 pub use sp_runtime::{MultiAddress, Perbill, Permill};
 use {
     cumulus_pallet_parachain_system::RelayNumberStrictlyIncreases,
     cumulus_primitives_core::{relay_chain::BlockNumber as RelayBlockNumber, DmpMessageHandler},
     frame_support::{
         construct_runtime,
-        dispatch::DispatchClass,
+        dispatch::{PostDispatchInfo, DispatchClass},
         pallet_prelude::DispatchResult,
         parameter_types,
         traits::{
             ConstBool, ConstU128, ConstU32, ConstU64, ConstU8, Contains, InsideBoth,
-            InstanceFilter, OffchainWorker, OnFinalize, OnIdle, OnInitialize, OnRuntimeUpgrade, 
+            InstanceFilter, OffchainWorker, OnFinalize, OnIdle, OnInitialize, OnRuntimeUpgrade,
+            AsEnsureOriginWithArg
         },
         weights::{
             constants::{
@@ -49,6 +54,7 @@ use {
             ConstantMultiplier, Weight, WeightToFeeCoefficient, WeightToFeeCoefficients,
             WeightToFeePolynomial,
         },
+        PalletId,
     },
     frame_system::{
         limits::{BlockLength, BlockWeights},
@@ -64,13 +70,17 @@ use {
     sp_core::{MaxEncodedLen, OpaqueMetadata},
     sp_runtime::{
         create_runtime_str, generic, impl_opaque_keys,
-        traits::{AccountIdLookup, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify},
+        traits::{AccountIdLookup, AccountIdConversion, BlakeTwo256, Block as BlockT, IdentifyAccount, Verify, One},
         transaction_validity::{TransactionSource, TransactionValidity},
-        ApplyExtrinsicResult, MultiSignature,
+        ApplyExtrinsicResult, MultiSignature, DispatchResultWithInfo, Percent
     },
     sp_std::prelude::*,
     sp_version::RuntimeVersion,
 };
+use sp_runtime::SaturatedConversion;
+use orml_traits::parameter_type_with_key;
+use pallet_acurast_fulfillment_receiver::Fulfillment;
+
 
 pub mod xcm_config;
 
@@ -350,10 +360,11 @@ impl pallet_timestamp::Config for Runtime {
 
 parameter_types! {
     pub const ExistentialDeposit: Balance = EXISTENTIAL_DEPOSIT;
+    pub const MaxLocks: u32 = 50;
 }
 
 impl pallet_balances::Config for Runtime {
-    type MaxLocks = ConstU32<50>;
+    type MaxLocks = MaxLocks;
     /// The type for recording an account's balance.
     type Balance = Balance;
     /// The ubiquitous event type.
@@ -386,6 +397,53 @@ impl pallet_transaction_payment::Config for Runtime {
     type FeeMultiplierUpdate = ConstFeeMultiplier<FeeMultiplier>;
 }
 
+parameter_types! {
+	pub const DexPalletId: PalletId = PalletId(*b"bitg/dex");
+	pub const MinUnitsToCreateSellOrder : u32 = 100;
+	pub const MinPricePerUnit : u32 = 1;
+	pub const MaxPaymentFee : Percent = Percent::from_percent(10);
+	pub const MaxPurchaseFee : Balance = 10 * UNIT;
+	#[derive(Clone, scale_info::TypeInfo)]
+	pub const MaxValidators : u32 = 10;
+	#[derive(Clone, scale_info::TypeInfo, Debug, PartialEq)]
+	pub const MaxTxHashLen : u32 = 1000;
+	#[derive(Clone, scale_info::TypeInfo)]
+	pub const BuyOrderExpiryTime : u32 = HOURS;
+	#[derive(Clone, scale_info::TypeInfo, Debug, PartialEq)]
+	pub const MaxAddressLen : u32 = 1000;
+	#[derive(Clone, scale_info::TypeInfo, Debug, PartialEq)]
+	pub const MaxOrderIds : u32 = 100;
+	#[derive(Clone, scale_info::TypeInfo, Debug, PartialEq)]
+	pub const MaxPayoutsToStore : u32 = 1000;
+	#[derive(Clone, scale_info::TypeInfo, Debug, PartialEq)]
+	pub const MaxOpenOrdersPerUser : u32 = 10;
+}
+
+impl pallet_dex::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Asset = Assets;
+	type Currency = Tokens;
+	type CurrencyBalance = u128;
+	type AssetBalance = u128;
+	type PalletId = DexPalletId;
+	type AssetValidator = CarbonCredits;
+	type MinPricePerUnit = MinPricePerUnit;
+	type MaxValidators = MaxValidators;
+	type MaxTxHashLen = MaxTxHashLen;
+	type KYCProvider = KYCPallet;
+	type BuyOrderExpiryTime = BuyOrderExpiryTime;
+	type MinUnitsToCreateSellOrder = MinUnitsToCreateSellOrder;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type MaxPaymentFee = MaxPaymentFee;
+	type MaxPurchaseFee = MaxPurchaseFee;
+	type MaxAddressLen = MaxAddressLen;
+	type MaxOrderIds = MaxOrderIds;
+	type MaxPayoutsToStore = MaxPayoutsToStore;
+	type MaxOpenOrdersPerUser = MaxOpenOrdersPerUser;
+	type WeightInfo = ();
+}
+
+
 // New Pallets impl added to template
 
 parameter_types! {
@@ -411,7 +469,7 @@ impl pallet_assets::Config for Runtime {
     // Stores the balances in an unsigned integer of 128bits
     type Balance = u128;
     // The id of an asset can be defined as an unsigned integer of 64 bits
-    type AssetId = u64;
+    type AssetId = u32;
     // Uses module Balances as mechanism for currency operations
     type Currency = Balances;
 
@@ -424,7 +482,7 @@ impl pallet_assets::Config for Runtime {
     type StringLimit = StringLimit;
 
     // More configuration
-    type AssetIdParameter = u64;
+    type AssetIdParameter = u32;
     // Defines the allowed origins to create assets
     type CreateOrigin = 
         frame_support::traits::AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
@@ -441,7 +499,261 @@ impl pallet_assets::Config for Runtime {
 }
 
 
-//
+parameter_types! {
+	pub const KYCPalletId: PalletId = PalletId(*b"bitg/kyc");
+}
+
+impl pallet_kyc::Config for Runtime {
+	type AddOrigin = EnsureRoot<AccountId>;
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type PalletId = KYCPalletId;
+	type MaxAuthorizedAccountCount = ConstU32<100>;
+    type MaxStringLength = ConstU32<512>;
+    type MaxQueueLength = ConstU32<100>;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+  pub MarketplaceEscrowAccount : AccountId =  PalletId(*b"bitg/mkp").into_account_truncating();
+  pub const CarbonCreditsPalletId: PalletId = PalletId(*b"bitg/vcu");
+  pub const MaxAuthorizedAccountCount : u32 = 10;
+  pub const MaxDocumentCount : u32 = 10;
+  pub const MaxIpfsReferenceLength : u32 = 1024;
+  pub const MaxLongStringLength : u32 = 3072;
+  pub const MaxRoyaltyRecipients : u32 = 10;
+  pub const MaxShortStringLength : u32 = 1024;
+  pub const MinProjectId : u32 = 1000;
+  #[derive(Debug, Clone, Copy, PartialEq, Eq, Encode, Decode, MaxEncodedLen, TypeInfo)]
+  pub const MaxGroupSize : u32 = 10;
+  pub const MaxCoordinatesLength : u32 = 10;
+}
+
+impl pallet_carbon_credits::Config for Runtime {
+	type AssetHandler = Assets;
+	type AssetId = u32;
+	type ProjectId = u32;
+	type GroupId = u32;
+	type Balance = u128;
+	type RuntimeEvent = RuntimeEvent;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type ItemId = u32;
+	type KYCProvider = KYCPallet;
+	type MarketplaceEscrow = MarketplaceEscrowAccount;
+	type MaxAuthorizedAccountCount = MaxAuthorizedAccountCount;
+	type MaxDocumentCount = MaxDocumentCount;
+	type MaxGroupSize = MaxGroupSize;
+	type MaxIpfsReferenceLength = MaxIpfsReferenceLength;
+	type MaxLongStringLength = MaxLongStringLength;
+	type MaxRoyaltyRecipients = MaxRoyaltyRecipients;
+	type MaxShortStringLength = MaxShortStringLength;
+	type MinProjectId = MinProjectId;
+	type NFTHandler = Uniques;
+	type PalletId = CarbonCreditsPalletId;
+	type MaxCoordinatesLength = MaxCoordinatesLength;
+	type WeightInfo = ();
+}
+
+parameter_types! {
+	pub const CarbonCreditsPoolPalletId: PalletId = PalletId(*b"bit/vcup");
+	pub const MaxAssetSymbolLength : u32 = 10;
+	pub const MaxIssuanceYearCount : u32 = 20;
+	pub const MaxProjectIdList : u32 = 100;
+	pub const MaxRegistryListCount : u32 = 10;
+	pub const MinPoolId : u32 = 10000;
+}
+
+impl pallet_carbon_credits_pool::Config for Runtime {
+	type AssetHandler = Assets;
+	type RuntimeEvent = RuntimeEvent;
+	type ForceOrigin = EnsureRoot<AccountId>;
+	type MaxAssetSymbolLength = MaxAssetSymbolLength;
+	type MaxIssuanceYearCount = MaxIssuanceYearCount;
+	type MaxProjectIdList = MaxProjectIdList;
+	type MaxRegistryListCount = MaxRegistryListCount;
+	type MinPoolId = MinPoolId;
+	type PalletId = CarbonCreditsPoolPalletId;
+	type PoolId = u32;
+	type WeightInfo = ();
+}
+
+// TODO : Ensure sensible values
+impl pallet_uniques::Config for Runtime {
+	type AttributeDepositBase = ConstU128<1>;
+	type CollectionDeposit = ConstU128<0>;
+	type CollectionId = u32;
+	type CreateOrigin = AsEnsureOriginWithArg<frame_system::EnsureSigned<AccountId>>;
+	type Currency = Balances;
+	type DepositPerByte = DepositPerByte;
+	type RuntimeEvent = RuntimeEvent;
+	type ForceOrigin = frame_system::EnsureRoot<AccountId>;
+	type ItemDeposit = ConstU128<0>;
+	type ItemId = u32;
+	type KeyLimit = ConstU32<50>;
+	type Locker = ();
+	type MetadataDepositBase = ConstU128<1>;
+	type StringLimit = ConstU32<50>;
+	type ValueLimit = ConstU32<50>;
+    //type Helper = ();
+	type WeightInfo = ();
+}
+
+
+parameter_types! {
+	pub const MaxKeyLength : u32 = 1024;
+	pub const MaxValueLength : u32 = 64000;
+	pub const DepositPerByte : Balance = DOLLARS / 10;
+}
+
+impl pallet_general_storage::Config for Runtime {
+	type RuntimeEvent = RuntimeEvent;
+	type Currency = Balances;
+	type MaxKeyLength = MaxKeyLength;
+	type MaxValueLength = MaxValueLength;
+	type DepositPerByte = DepositPerByte;
+}
+
+// orml pallets
+parameter_type_with_key! {
+	pub ExistentialDeposits: |_currency_id: primitives::CurrencyId| -> Balance {
+		One::one()
+	};
+}
+
+pub struct DustRemovalWhitelist;
+impl Contains<AccountId> for DustRemovalWhitelist {
+	fn contains(_a: &AccountId) -> bool {
+		false
+	}
+}
+
+impl orml_tokens::Config for Runtime {
+	type Amount = Amount;
+	type Balance = Balance;
+	type CurrencyId = primitives::CurrencyId;
+	type DustRemovalWhitelist = DustRemovalWhitelist;
+	type RuntimeEvent = RuntimeEvent;
+	type ExistentialDeposits = ExistentialDeposits;
+	type MaxLocks = MaxLocks;
+	type MaxReserves = MaxLocks;
+	type ReserveIdentifier = [u8; 8];
+	type CurrencyHooks = ();
+	type WeightInfo = ();
+}
+
+parameter_types! {
+    pub const ForestaCollectivesPalletId: PalletId = PalletId(*b"for/coll");
+    pub const Managers: u32 = 5;
+    pub const MaxString: u32 = 64;
+    pub const MaxVotesPerBlock: u32 = 16;
+    pub const VoteDuration: BlockNumber = 200;
+    pub const MaxPPC: u32 = 100;
+}
+
+impl pallet_foresta_collectives::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type WeightInfo = pallet_foresta_collectives::weights::SubstrateWeight<Runtime>;
+    type KYCProvider = KYCPallet;
+    type CollectiveId = u32;
+    type ProposalId = u32;
+    type VoteId = u32;
+    type PalletId = ForestaCollectivesPalletId;
+    type MaxNumManagers = Managers;
+    type MaxStringLength = MaxString;
+    type MaxConcurrentVotes = MaxVotesPerBlock;
+    type MaxProjectsPerCollective = MaxPPC;
+    type VotingDuration = VoteDuration;
+    type ForceOrigin = EnsureRoot<AccountId>;
+}
+
+pub type SignedPayload = generic::SignedPayload<RuntimeCall, SignedExtra>;
+
+// Configure the pallet template in pallets/template.
+parameter_types! {
+	pub const GracePeriod: BlockNumber = 3;
+	pub const MaxP: u32 = 64;
+	pub const MaxA: u32 = 64;
+}
+
+//Pallet OCW
+impl pallet_foresta_ocw::Config for Runtime {
+	type AuthorityId = pallet_foresta_ocw::crypto::TestAuthId;
+	type RuntimeEvent = RuntimeEvent;
+	type GracePeriod = GracePeriod;
+	type MaxPrices = MaxP;
+	type MaxAuthorities = MaxA;
+}
+
+impl pallet_membership::Config for Runtime {
+	type AddOrigin = EnsureRoot<AccountId>;
+	type MaxMembers = ConstU32<50>;
+	type MembershipChanged = ();
+	type MembershipInitialized = ();
+	type PrimeOrigin = EnsureRoot<AccountId>;
+	type RemoveOrigin = EnsureRoot<AccountId>;
+	type ResetOrigin = EnsureRoot<AccountId>;
+	type RuntimeEvent = RuntimeEvent;
+	type SwapOrigin = EnsureRoot<AccountId>;
+	type WeightInfo = ();
+}
+
+impl<LocalCall> frame_system::offchain::CreateSignedTransaction<LocalCall> for Runtime
+where
+	RuntimeCall: From<LocalCall>,
+{
+	fn create_transaction<C: frame_system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: RuntimeCall,
+		public: <Signature as sp_runtime::traits::Verify>::Signer,
+		account: AccountId,
+		index: Index,
+	) -> Option<(
+		RuntimeCall,
+		<UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
+	)> {
+		let period = BlockHashCount::get() as u64;
+		let current_block = System::block_number()
+			.saturated_into::<u64>()
+			.saturating_sub(1);
+		let tip = 0;
+		let extra: SignedExtra = (
+			frame_system::CheckNonZeroSender::<Runtime>::new(),
+			frame_system::CheckSpecVersion::<Runtime>::new(),
+			frame_system::CheckTxVersion::<Runtime>::new(),
+			frame_system::CheckGenesis::<Runtime>::new(),
+			frame_system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+			frame_system::CheckNonce::<Runtime>::from(index),
+			frame_system::CheckWeight::<Runtime>::new(),
+			pallet_transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+		);
+
+		#[cfg_attr(not(feature = "std"), allow(unused_variables))]
+		let raw_payload = SignedPayload::new(call, extra)
+			.map_err(|e| {
+				log::warn!("SignedPayload error: {:?}", e);
+			})
+			.ok()?;
+
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
+
+		let address = account;
+		let (call, extra, _) = raw_payload.deconstruct();
+		Some((call, (sp_runtime::MultiAddress::Id(address), signature.into(), extra)))
+	}
+}
+
+impl frame_system::offchain::SigningTypes for Runtime {
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+}
+
+impl<C> frame_system::offchain::SendTransactionTypes<C> for Runtime
+where
+	RuntimeCall: From<C>,
+{
+	type Extrinsic = UncheckedExtrinsic;
+	type OverarchingCall = RuntimeCall;
+}
+
 
 parameter_types! {
     pub const ReservedXcmpWeight: Weight = MAXIMUM_BLOCK_WEIGHT.saturating_div(4);
@@ -713,6 +1025,23 @@ impl OffchainWorker<BlockNumber> for MaintenanceHooks {
     }
 }
 
+
+impl pallet_acurast_fulfillment_receiver::Config for Runtime {
+    type RuntimeEvent = RuntimeEvent;
+    type OnFulfillment = OnAcurastFulfillment;
+    type WeightInfo = ();
+}
+
+pub struct OnAcurastFulfillment;
+impl pallet_acurast_fulfillment_receiver::traits::OnFulfillment<Runtime> for OnAcurastFulfillment {
+	fn on_fulfillment(
+		_from: <Runtime as frame_system::Config>::AccountId,
+		_fulfillment: Fulfillment,
+	) -> DispatchResultWithInfo<PostDispatchInfo> {
+		Ok(().into())
+	}
+}
+
 impl pallet_maintenance_mode::Config for Runtime {
     type RuntimeEvent = RuntimeEvent;
     type NormalCallFilter = NormalFilter;
@@ -794,14 +1123,17 @@ construct_runtime!(
         Balances: pallet_balances = 10,
         TransactionPayment: pallet_transaction_payment = 11,
         Assets: pallet_assets = 12,
+        Membership: pallet_membership::{Pallet, Call, Storage, Config<T>, Event<T>} = 13,
 
-        //Custom
-        ForestaCollectives: pallet_foresta_collectives = 20,
-
+        // orml pallets
+		Tokens: orml_tokens = 41,
 
         // ContainerChain Author Verification
         AuthoritiesNoting: pallet_cc_authorities_noting = 50,
         AuthorInherent: pallet_author_inherent = 51,
+
+        //Acurast
+        Acurast: pallet_acurast_fulfillment_receiver = 60,
 
         // XCM
         XcmpQueue: cumulus_pallet_xcmp_queue::{Pallet, Storage, Event<T>} = 70,
@@ -813,7 +1145,17 @@ construct_runtime!(
         RootTesting: pallet_root_testing = 100,
         AsyncBacking: pallet_async_backing::{Pallet, Storage} = 110,
 
+		// Bitgreen pallets
+        CarbonCredits: pallet_carbon_credits::{Pallet, Call, Storage, Event<T>} = 81,
+		CarbonCreditsPools: pallet_carbon_credits_pool::{Pallet, Call, Storage, Event<T>} = 82,
+		KYCPallet: pallet_kyc::{Pallet, Call, Storage, Config<T>, Event<T>} = 83,
+		Uniques: pallet_uniques::{Pallet, Call, Storage, Event<T>} = 84,
+		GeneralStorage: pallet_general_storage::{Pallet, Call, Storage, Event<T>} = 85,
+        Dex: pallet_dex = 86,
+
         // Governance
+        ForestaCollectives: pallet_foresta_collectives = 91,
+        ForestaOCW: pallet_foresta_ocw = 92,
 
     }
 );
@@ -930,6 +1272,7 @@ impl_runtime_apis! {
                 pallet_cc_authorities_noting,
                 PalletAuthoritiesNotingBench::<Runtime>
             );
+            list_benchmark!(list, extra, pallet_foresta_collectives, ForestaCollectives);
 
             let storage_info = AllPalletsWithSystem::storage_info();
 
@@ -983,6 +1326,7 @@ impl_runtime_apis! {
                 pallet_cc_authorities_noting,
                 PalletAuthoritiesNotingBench::<Runtime>
             );
+            add_benchmark!(params, batches, pallet_foresta_collectives, ForestaCollectives);
             if batches.is_empty() {
                 return Err("Benchmark not found for this pallet.".into());
             }

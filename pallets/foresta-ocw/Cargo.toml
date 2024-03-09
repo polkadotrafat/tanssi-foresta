@@ -1,0 +1,46 @@
+[package]
+name = "pallet-foresta-ocw"
+version = "1.0.0"
+authors = ["Foresta"]
+edition = "2021"
+license = "MIT"
+homepage = "https://substrate.io"
+repository = "https://github.com/paritytech/substrate/"
+description = "FRAME example pallet for offchain worker (price oracle)"
+readme = "README.md"
+publish = false
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[dependencies]
+codec = { package = "parity-scale-codec", version = "3.6.1", default-features = false }
+lite-json = { version = "0.2.0", default-features = false }
+log = { version = "0.4.17", default-features = false }
+scale-info = { version = "2.5.0", default-features = false, features = ["derive"] }
+frame-support = { workspace = true}
+frame-system = { workspace = true}
+sp-core = { workspace = true}
+sp-io = { workspace = true}
+sp-keystore = { workspace = true, optional = true}
+sp-runtime = { workspace = true}
+sp-std = { workspace = true}
+pallet-foresta-collectives = { workspace = true}
+
+[features]
+default = ["std"]
+std = [
+	"codec/std",
+	"frame-support/std",
+	"frame-system/std",
+	"lite-json/std",
+	"log/std",
+	"scale-info/std",
+	"sp-core/std",
+	"sp-io/std",
+	"sp-keystore",
+	"sp-runtime/std",
+    "pallet-foresta-collectives/std",
+	"sp-std/std",
+]
+try-runtime = ["frame-support/try-runtime"]
